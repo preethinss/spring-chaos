@@ -12,21 +12,26 @@ Integrating and executing experiments with Chaos Monkey for Spring Boot-Java app
 * Execute the experiments
 
 1. Add Chaos Monkey to SpringBoot application
+
+   
    #pom dependency
+
     <dependency>
     <groupId>de.codecentric</groupId>
         <artifactId>chaos-monkey-spring-boot</artifactId>
         <version>{version}</version>
     </dependency>
 
-    # application.properties
-   spring.profiles.active=chaos-monkey
-   chaos.monkey.enabled=true
-   management.endpoint.chaosmonkey.enabled=true
-   management.endpoints.web.exposure.include=health,info,chaosmonkey
-   management.endpoints.web.base-path=/actuator
+    #application.properties
 
-2. Create Chaos experiments
+      spring.profiles.active=chaos-monkey
+      chaos.monkey.enabled=true
+      management.endpoint.chaosmonkey.enabled=true
+      management.endpoints.web.exposure.include=health,info,chaosmonkey
+      management.endpoints.web.base-path=/actuator
+
+3. Create Chaos experiments
+   
     Spring Boot Chaos Monkey uses reflections to inject failures in the application. 
     These experiments are defined with the conventions of Watchers and Assaults.
 
@@ -45,6 +50,7 @@ A Watcher is a module that injects the failure in the Application modules decora
 Assaults
 
 Assault is the attack that is injected in the application. The following Assaults are supported in the version used in this post.
+
 * Latency Assault
 * Exception Assault
 * AppKiller Assault
@@ -153,9 +159,13 @@ The following experiment file defines an experiment to test application when a f
 }
 ---------------------------------------------------------------------------------------
 The steady state hypothesis means the experiment will be considered successful on receiving HTTP(probes[0].provider.type) HTTP 200 response (probes[0].tolerance) from http://localhost:8080/order-svc/all-orders (probes[0].provider.url) in 1 second (probes[0].provider.timeout).
+
 The method configure_repository_watcher sets the repository assaults in the configure_repository_watcher.arguments.repository:true
+
 The method configure_assaults sets an exception assault using exceptionsAssault:true.
+
 The method configure_assaults injects the failure using level:1. If you need to inject the failure on random request the please choose any number from 2–5. Level > 1 would require one to fire the tests from a load test tool. Example: level:2 means inject failure every alternative request, or level 5 will inject failure every fifth request to the test.
+
 The rollbacks defines the rollbacks that can be applied after the test is successful. The rollback section in this test disable the chaos monkey from the application. As per the declaration above, the rollback section will not execute after the failure happens, so the chaos monkey will continue to inject failures on every successive request in the application.
 
 Pre-Test set-up
@@ -165,11 +175,13 @@ Pre-Test set-up
 * Verify the H2 in-memory database, sql and data is working http://localhost:8080/h2-console/
 * Create the virtual environment to run the experiment from toolkit.
 ---------------------------------------------------------------------------------------
+
 chaos run <<path of the experiment file>>
 
 $ chaos run {root-path}/experiment-database-failure-injector.json
 
 The test will fail the steady state hypothesis with the following log
+
 ***************************************************************************************
 [2021–09–13 17:28:11 INFO] Validating the experiment’s syntax
 [2021–09–13 17:28:11 INFO] Experiment looks valid
@@ -188,7 +200,9 @@ The test will fail the steady state hypothesis with the following log
 [2021–09–13 17:28:11 CRITICAL] Steady state probe ‘we-can-retrieve-all-orders-from-DB’ is not in the given tolerance so failing this experiment
 [2021–09–13 17:28:11 INFO] Experiment ended with status: deviated
 [2021–09–13 17:28:11 INFO] The steady-state has deviated, a weakness may have been discovered
+
 **************************************************************************************
+
 This experiment have discovered a possible weakness within the application.
 
 Fix Issue:
@@ -196,6 +210,7 @@ Fix Issue:
 There are multiple ways to fix this issue in the application code. Uncomment the try catch block at OrderComponent.getAllOrders().
 
 After deploying the fix, the same experiment will successfully pass with the following console output.
+
 ***************************************************************************************
 [2021–09–13 17:44:20 INFO] Validating the experiment’s syntax
 [2021–09–13 17:44:20 INFO] Experiment looks valid
@@ -217,6 +232,7 @@ After deploying the fix, the same experiment will successfully pass with the fol
 [2021–09–13 17:44:20 INFO] Experiment ended with status: completed
 ***************************************************************************************
 Verification from application logs
+
 It can still be verified from the application or console logs that the failure was injected and the application handled it in the graceful manner.
 ***************************************************************************************
 ...
@@ -226,6 +242,7 @@ xxx.xxx.xxx.ordersvc.order.OrderComponent.getAllOrders(OrderComponent.java:30) ~
 ...
 ***************************************************************************************
 ***************************************************************************************
+
 Experiment 2— Experiment to inject service failures
 
 The following experiment file defines an experiment to test application when a failure is injected at service connection for every request. The application tries to connect to a downstream serve and get a connection error
@@ -327,16 +344,23 @@ The following experiment file defines an experiment to test application when a f
 }
 --------------------------------------------------------------------------------------
 configure_argument_watcher is configured to add assault to the service
+
 configure_assaults injects a Runtime Exception
+
 steady_state_hypothesis will be fulfilled when the test receives HTTP 200 response under 1 seconds from http://localhost:8080/process-billing-for-order
 ---------------------------------------------------------------------------------------
 Running Experiment 2 — Service failure experiment
 
-Ensure the test set up is correct as per instructions in section 3.4
+Ensure the test set up is correct as per instruction
+
 Check if order service API is up and running: http://localhost:8080/order-svc/order-billing-status/1
+
 Case 1: When billing-service is NOT up and running then #2, should return HTTP 500 error response
+
 Case 2: When billing-service is up and running, then #2, should return HTTP 200 response with body { “id”: 1, “status”: “ON_HOLD”, “billingStatus”: true }
+
 The success criteria of this test depends on Case 2.
+
 3. Execute the chaos run command from the chaos toolkit virtual environment to run experiment from experiment-service-failure-injector.json
 
 $ chaos run {root-path}/experiment-service-failure-injector.json
@@ -365,6 +389,7 @@ Fix Issue:
 There are multiple ways to fix this issue in the application code. For demo, I will uncomment the try catch block at OrderComponent.getOrderBillingStatus(int id);
 
 After deploying the fix, the same experiment will successfully pass with the following console output.
+
 ---------------------------------------------------------------------------------------
 [2021-09-14 17:04:33 INFO] Validating the experiment's syntax
 [2021-09-14 17:04:33 INFO] Experiment looks valid
@@ -386,6 +411,7 @@ After deploying the fix, the same experiment will successfully pass with the fol
 [2021-09-14 17:04:33 INFO] Experiment ended with status: completed
 ---------------------------------------------------------------------------------------
 Verification from application logs
+
 It can be verified from the application or console logs that the failure was injected at desired location, and the application handled it in the graceful manner.
 ***************************************************************************************
 ....
